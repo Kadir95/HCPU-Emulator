@@ -8,6 +8,7 @@ package hcpuemulator;
 import java.io.IOException;
 import java.net.URL;
 import java.nio.ByteBuffer;
+import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
@@ -17,6 +18,7 @@ import javafx.beans.property.ReadOnlyIntegerWrapper;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.event.ActionEvent;
+import javafx.event.EventHandler;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.fxml.Initializable;
@@ -26,6 +28,8 @@ import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
+import javafx.scene.input.DragEvent;
+import javafx.scene.input.Dragboard;
 import javafx.stage.Stage;
 
 /**
@@ -147,6 +151,7 @@ public class FXMLDocumentController implements Initializable {
                 case "BZJ":
                     if(getValue(inst.getAddressB()) == 0){
                         pc = getValue(inst.getAddressA());
+                        pc--;
                     }
                     break;
                 case "BZJi":
@@ -259,6 +264,22 @@ public class FXMLDocumentController implements Initializable {
                 String newValue) {
                 if (!newValue.matches("\\d*")) {
                     valuetext.setText(newValue.replaceAll("[^\\d]", ""));
+                }
+            }
+        });
+        
+        textarea.setOnDragDropped(new EventHandler<DragEvent>() {
+            @Override
+            public void handle(DragEvent event) {
+                Dragboard db = event.getDragboard();
+                if(db.hasFiles()){
+                    try{
+                        textarea.setText(new String(Files.readAllBytes(db.getFiles().get(0).toPath())));
+                    } catch(IOException e){
+                        System.err.println("Drag unsuccess!");
+                    }
+                }else if(db.hasString()){
+                    textarea.setText(db.getString());
                 }
             }
         });
