@@ -7,9 +7,13 @@ package hcpuemulator;
 
 import java.io.IOException;
 import java.net.URL;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.ResourceBundle;
 import java.util.Scanner;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import javafx.beans.property.ReadOnlyIntegerWrapper;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
@@ -27,6 +31,8 @@ import javafx.stage.Stage;
 import org.fxmisc.flowless.VirtualizedScrollPane;
 import org.fxmisc.richtext.CodeArea;
 import org.fxmisc.richtext.LineNumberFactory;
+import org.fxmisc.richtext.model.StyleSpans;
+import org.fxmisc.richtext.model.StyleSpansBuilder;
 
 /**
  *
@@ -213,6 +219,10 @@ public class FXMLDocumentController implements Initializable {
         }
     }
 
+    private final String[] KEYWORDS = new String[] {"ADD", "ADDi", "NAND", "NANDi", "SRL", "SRLi", "LT", "LTi", "CP", "CPi", "CPI", "CPIi", "BZJ", "BZJi", "MUL", "MULi"};
+    private final String KEYWORDS_PATTERN = "\\b(" + String.join("|", KEYWORDS) + ")\\b";
+    private final Pattern PATTERN = Pattern.compile("(?<KEYWORD>" + KEYWORDS_PATTERN + ")");
+    
     private HashMap<Integer, TableCell> memory = new HashMap<>(256);
 
     @FXML
@@ -321,7 +331,11 @@ public class FXMLDocumentController implements Initializable {
     @Override
     public void initialize(URL url, ResourceBundle rb) {
         codeArea = new CodeArea();
+        codeArea.getStylesheets().addAll(FXMLDocumentController.class.getResource("style.css").toExternalForm());
         codeArea.setParagraphGraphicFactory(LineNumberFactory.get(codeArea));
+        codeArea.textProperty().addListener((obs, oldText, newText) -> {
+            codeArea.setStyleSpans(0, computeHighlighting(newText));
+        });
         codepane.getChildren().add(new VirtualizedScrollPane<>(codeArea));
         
         addresstext.textProperty().addListener(new ChangeListener<String>() {
@@ -359,6 +373,23 @@ public class FXMLDocumentController implements Initializable {
         });
 
         table.getColumns().addAll(addresscolumn, valuecolumn);
+    }
+    
+    private StyleSpans<Collection<String>> computeHighlighting(String text){
+        Matcher matcher = PATTERN.matcher(text);
+        int lastKwEnd = 0;
+        StyleSpansBuilder<Collection<String>> spansBuilder = new StyleSpansBuilder<>();
+        
+        while (matcher.find()){
+            String styleClass = matcher.group("KEYWORD") != null ? "keyword" : null;
+            assert styleClass != null;
+            
+            spansBuilder.add(Collections.emptyList(), matcher.start() - lastKwEnd);
+            spansBuilder.add(Collections.singleton(styleClass), matcher.end() - matcher.start());
+            lastKwEnd = matcher.end();
+        }
+        spansBuilder.add(Collections.emptyList(), text.length() - lastKwEnd);
+        return spansBuilder.create();
     }
 
 }
