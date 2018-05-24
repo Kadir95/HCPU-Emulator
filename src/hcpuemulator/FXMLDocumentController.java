@@ -7,7 +7,6 @@ package hcpuemulator;
 
 import java.io.IOException;
 import java.net.URL;
-import java.nio.file.Files;
 import java.util.HashMap;
 import java.util.ResourceBundle;
 import java.util.Scanner;
@@ -15,7 +14,6 @@ import javafx.beans.property.ReadOnlyIntegerWrapper;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.event.ActionEvent;
-import javafx.event.EventHandler;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.fxml.Initializable;
@@ -23,11 +21,12 @@ import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
-import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
-import javafx.scene.input.DragEvent;
-import javafx.scene.input.Dragboard;
+import javafx.scene.layout.StackPane;
 import javafx.stage.Stage;
+import org.fxmisc.flowless.VirtualizedScrollPane;
+import org.fxmisc.richtext.CodeArea;
+import org.fxmisc.richtext.LineNumberFactory;
 
 /**
  *
@@ -38,11 +37,13 @@ public class FXMLDocumentController implements Initializable {
     @FXML
     private TableView<TableCell> table;
     @FXML
-    private TextArea textarea;
-    @FXML
     private TextField addresstext;
     @FXML
     private TextField valuetext;
+    @FXML
+    private StackPane codepane;
+    
+    private CodeArea codeArea;
 
     class TableCell {
         public int address;
@@ -208,13 +209,11 @@ public class FXMLDocumentController implements Initializable {
                 default:
                     System.err.println("Unknown OP : " + inst.opcode);
             }
-            System.out.println("Program Counter : " + pc);
             table.refresh();
         }
     }
 
     private HashMap<Integer, TableCell> memory = new HashMap<>(256);
-    private boolean sourcechange = true;
 
     @FXML
     public void openhelppage() {
@@ -231,7 +230,7 @@ public class FXMLDocumentController implements Initializable {
 
     @FXML
     public void runscript(ActionEvent event) {
-        Scanner input = new Scanner(textarea.getText());
+        Scanner input = new Scanner(codeArea.getText());
         
         for (int i = 0; input.hasNext(); i++) {
             setValue(i, input.nextLine());
@@ -321,6 +320,10 @@ public class FXMLDocumentController implements Initializable {
 
     @Override
     public void initialize(URL url, ResourceBundle rb) {
+        codeArea = new CodeArea();
+        codeArea.setParagraphGraphicFactory(LineNumberFactory.get(codeArea));
+        codepane.getChildren().add(new VirtualizedScrollPane<>(codeArea));
+        
         addresstext.textProperty().addListener(new ChangeListener<String>() {
             @Override
             public void changed(ObservableValue<? extends String> observable, String oldValue,
@@ -337,22 +340,6 @@ public class FXMLDocumentController implements Initializable {
                     String newValue) {
                 if (!newValue.matches("\\d*")) {
                     valuetext.setText(newValue.replaceAll("[^\\d]", ""));
-                }
-            }
-        });
-
-        textarea.setOnDragDropped(new EventHandler<DragEvent>() {
-            @Override
-            public void handle(DragEvent event) {
-                Dragboard db = event.getDragboard();
-                if (db.hasFiles()) {
-                    try {
-                        textarea.setText(new String(Files.readAllBytes(db.getFiles().get(0).toPath())));
-                    } catch (IOException e) {
-                        System.err.println("Drag unsuccess!");
-                    }
-                } else if (db.hasString()) {
-                    textarea.setText(db.getString());
                 }
             }
         });
